@@ -11,36 +11,35 @@ use iroh::{
 };
 use tracing::warn;
 
-use crate::config::auther::Authenticator;
+use crate::config::Auth;
 
 const SERVER_TCP_REQ_TIMEOUT_SEC: u64 = 10;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Socks<T>
 where
-	T: Authenticator,
+	T: Auth,
 {
-	auther: T,
+	auth: T,
 }
 
 impl<T> Socks<T>
 where
-	T: Authenticator,
+	T: Auth,
 {
-	pub(crate) fn new(auther: T) -> Self {
-		Self { auther }
+	pub(crate) fn new(auth: T) -> Self {
+		Self { auth }
 	}
 }
 
 impl<T> ProtocolHandler for Socks<T>
 where
-	T: Authenticator + Debug + Send + Sync + 'static,
+	T: Auth + Debug + Send + Sync + 'static,
 {
 	fn accept(&self, conn: Connection) -> impl Future<Output = Result<(), AcceptError>> + Send {
 		Box::pin(async move {
 			let node_id = conn.remote_node_id()?;
-			let is_allowed = self.auther.authenticate(&node_id);
-			if !is_allowed {
+			if !self.auth.is_allowed(&node_id) {
 				return Err(AcceptError::User {
 					source: eyre!("remote node {} is not allowed", node_id).into(),
 				});
