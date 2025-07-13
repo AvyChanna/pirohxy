@@ -87,20 +87,24 @@ async fn main() -> Result<()> {
 
 	let cfg_dir = cli.get_config_path()?;
 
+	// This also initializes the respective config directories
+	let identity = FileBasedIdentity::new(&cfg_dir)?;
+	let auth = FileBasedAuth::new(&cfg_dir)?;
+	let resolver = FileBasedNameResolver::new(&cfg_dir)?;
+
 	match cli.command {
 		Commands::Egress => {
-			let self_key = FileBasedIdentity::new(&cfg_dir)?.load()?;
-			let auth = FileBasedAuth::new(&cfg_dir)?;
+			let self_key = identity.load()?;
 			start_egress(self_key, auth).await
 		}
 		Commands::Connect {
 			server: server_name,
 			bind_addr,
 		} => {
-			let self_key = FileBasedIdentity::new(&cfg_dir)?.load()?;
-			let server_key = FileBasedNameResolver::new(&cfg_dir)?.resolve(server_name)?;
+			let self_key = identity.load()?;
+			let server_key = resolver.resolve(server_name)?;
 			bind_and_connect(self_key, server_key, &bind_addr).await
 		}
-		Commands::Init => FileBasedIdentity::new(&cfg_dir)?.generate(),
+		Commands::Init => identity.generate(),
 	}
 }
