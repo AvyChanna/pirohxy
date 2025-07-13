@@ -1,0 +1,154 @@
+[package]
+name = "piroxy"
+version = "0.1.0"
+edition = "2024"
+description = "SOCKS proxy with Iroh transport"
+license = "MIT"
+repository = "https://github.com/AvyChanna/piroxy"
+readme = "README.md"
+keywords = ["iroh", "socks", "proxy"]
+categories = ["network-programming", "command-line-utilities"]
+publish = false
+
+[dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
+color-eyre = "0.6.5"
+directories = "6.0.0"
+ed25519-dalek = { version = "2.2.0", features = ["pem"] }
+fast-socks5 = "1.0.0-rc.0"
+iroh = { version = "0.90.0", features = [] }
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+tokio = { version = "1.46.1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal"] }
+tokio-util = "0.7.15"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "local-time"] }
+
+[features]
+default = ["server", "client"]
+server = []
+client = []
+server-dns = []
+
+[profile.dev]
+split-debuginfo = "unpacked"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+opt-level = 3
+lto = true
+debug = "line-tables-only"
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+rust-2018-compatibility = { level = "warn", priority = -1 }
+rust-2021-compatibility = { level = "warn", priority = -1 }
+rust-2024-compatibility = { level = "warn", priority = -1 }
+deprecated-safe = { level = "warn", priority = -1 }
+future-incompatible = { level = "warn", priority = -1 }
+keyword-idents = { level = "warn", priority = -1 }
+let-underscore = { level = "warn", priority = -1 }
+nonstandard-style = { level = "warn", priority = -1 }
+# refining-impl-trait = { level = "warn", priority = -1 }
+refining_impl_trait_reachable = "allow"
+absolute-paths-not-starting-with-crate = "warn"
+ambiguous-negative-literals = "warn"
+closure-returning-async-block = "warn"
+deprecated-in-future = "warn"
+deprecated-safe-2024 = "warn"
+deref-into-dyn-supertrait = "warn"
+edition-2024-expr-fragment-specifier = "warn"
+elided-lifetimes-in-paths = "warn"
+explicit-outlives-requirements = "warn"
+ffi-unwind-calls = "warn"
+if-let-rescope = "warn"
+impl-trait-overcaptures = "warn"
+impl-trait-redundant-captures = "warn"
+keyword-idents-2018 = "warn"
+keyword-idents-2024 = "warn"
+let-underscore-drop = "warn"
+linker-messages = "warn"
+macro-use-extern-crate = "warn"
+meta-variable-misuse = "warn"
+missing-unsafe-on-extern = "warn"
+non-ascii-idents = "warn"
+redundant-imports = "warn"
+redundant-lifetimes = "warn"
+rust-2021-incompatible-closure-captures = "warn"
+rust-2021-incompatible-or-patterns = "warn"
+rust-2021-prefixes-incompatible-syntax = "warn"
+rust-2021-prelude-collisions = "warn"
+rust-2024-guarded-string-incompatible-syntax = "warn"
+rust-2024-incompatible-pat = "warn"
+rust-2024-prelude-collisions = "warn"
+single-use-lifetimes = "warn"
+tail-expr-drop-order = "warn"
+trivial-casts = "warn"
+trivial-numeric-casts = "warn"
+unit-bindings = "warn"
+unnameable-types = "warn"
+unreachable-pub = "warn"
+unsafe-attr-outside-unsafe = "warn"
+unsafe-code = "forbid"
+unsafe-op-in-unsafe-fn = "warn"
+unstable-features = "warn"
+unused-extern-crates = "warn"
+unused-import-braces = "warn"
+unused-lifetimes = "warn"
+unused-macro-rules = "warn"
+unused-qualifications = "warn"
+unused-results = "warn"
+variant-size-differences = "warn"
+
+# unnameable_types = "allow"
+# unreachable_pub = "warn"
+# unsafe_op_in_unsafe_fn = "warn"
+# unused_lifetimes = "warn"
+# unused_macro_rules = "warn"
+# unused_qualifications = "warn"
+# unsafe_code = "deny"
+
+[lints.clippy]
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+multiple_crate_versions = "allow"
+pedantic = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+# restriction = { level = "warn", priority = -1 }
+alloc_instead_of_core = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+create_dir = "warn"
+dbg_macro = "warn"
+debug_assert_with_mut_call = "warn"
+fallible_impl_from = "warn"
+float_cmp_const = "warn"
+imprecise_flops = "warn"
+infinite_loop = "warn"
+lossy_float_literal = "warn"
+mem_forget = "warn"
+mutex_integer = "warn"
+negative_feature_names = "warn"
+nonstandard_macro_braces = "warn"
+path_buf_push_overwrite = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_mutex = "warn"
+redundant_feature_names = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+self_named_module_files = "warn"
+std_instead_of_alloc = "warn"
+std_instead_of_core = "warn"
+str_to_string = "warn"
+string_add = "warn"
+string_lit_as_bytes = "warn"
+string_to_string = "warn"
+todo = "warn"
+trait_duplication_in_bounds = "warn"
+undocumented_unsafe_blocks = "warn"
+verbose_file_reads = "warn"
