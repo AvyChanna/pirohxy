@@ -121,13 +121,13 @@ impl NameResolver for FileBasedNameResolver {
 		T: AsRef<str>,
 	{
 		let name_str = name.as_ref();
-		if name_str.starts_with(':') {
+		if let Some(stripped) = name_str.strip_prefix(':') {
 			ensure!(
 				name_str.len() > 1,
 				"Name cannot be empty after ':' prefix: '{}'",
 				name_str
 			);
-			return Ok(NodeId::from_z32(&name_str[1..])?);
+			return Ok(NodeId::from_z32(stripped)?);
 		}
 
 		ensure!(
@@ -141,6 +141,6 @@ impl NameResolver for FileBasedNameResolver {
 		);
 		let file_path = self.name_dir.join(name_str);
 		let data = fs::read_to_string(file_path)?;
-		Ok(NodeId::from_z32(&data)?)
+		Ok(NodeId::from_z32(data.trim())?)
 	}
 }

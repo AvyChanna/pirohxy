@@ -1,9 +1,10 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
-use color_eyre::eyre::{OptionExt, Result, ensure};
+use color_eyre::eyre::{OptionExt, Result, bail, ensure};
 use directories::ProjectDirs;
+use iroh::node_info::NodeIdExt;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 
@@ -40,33 +41,37 @@ enum Commands {
 		#[arg(short='b', long, default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8080))]
 		bind_addr: SocketAddr,
 	},
-	#[command(about = "Initialize client identity")]
+	#[command(about = "Initialize an identity")]
 	Init,
+	#[command(about = "Print current identity")]
+	Identity,
 }
 
 impl Cli {
-	#[must_use]
 	fn get_config_path(&self) -> Result<PathBuf> {
 		let cfg_dir = match &self.config {
-			Some(path) => path,
-			None => &ProjectDirs::from(QUALIFIER_NAME, ORGANIZATION_NAME, APPLICATION_NAME)
+			Some(path) => path.clone(),
+			None => ProjectDirs::from(QUALIFIER_NAME, ORGANIZATION_NAME, APPLICATION_NAME)
 				.ok_or_eyre("Could not find project directories")?
 				.config_local_dir()
 				.to_path_buf(),
 		};
-		let cfg_dir = cfg_dir.canonicalize()?;
-		ensure!(
-			cfg_dir.exists(),
-			"Config directory does not exist: {}",
-			cfg_dir.display()
-		);
-		ensure!(
-			cfg_dir.is_dir(),
-			"Config path is not a directory: {}",
-			cfg_dir.display()
-		);
-		Ok(cfg_dir)
+		Ok(cfg_dir.canonicalize()?)
 	}
+}
+
+fn ensure_cfg_path(cfg_dir: &Path) -> Result<()> {
+	ensure!(
+		cfg_dir.exists(),
+		"Config directory does not exist: {}",
+		cfg_dir.display()
+	);
+	ensure!(
+		cfg_dir.is_dir(),
+		"Config path is not a directory: {}",
+		cfg_dir.display()
+	);
+	Ok(())
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -87,13 +92,11 @@ async fn main() -> Result<()> {
 
 	let cfg_dir = cli.get_config_path()?;
 
-	// This also initializes the respective config directories
-	let identity = FileBasedIdentity::new(&cfg_dir)?;
-	let auth = FileBasedAuth::new(&cfg_dir)?;
-	let resolver = FileBasedNameResolver::new(&cfg_dir)?;
-
-	match cli.command {
+	match &cli.command {
 		Commands::Egress => {
+			ensure_cfg_path(&cfg_dir)?;
+			let identity = FileBasedIdentity::new(&cfg_dir)?;
+			let auth = FileBasedAuth::new(&cfg_dir)?;
 			let self_key = identity.load()?;
 			start_egress(self_key, auth).await
 		}
@@ -101,10 +104,32 @@ async fn main() -> Result<()> {
 			server: server_name,
 			bind_addr,
 		} => {
+			ensure_cfg_path(&cfg_dir)?;
+			let identity = FileBasedIdentity::new(&cfg_dir)?;
+			let resolver = FileBasedNameResolver::new(&cfg_dir)?;
 			let self_key = identity.load()?;
 			let server_key = resolver.resolve(server_name)?;
-			bind_and_connect(self_key, server_key, &bind_addr).await
+			bind_and_connect(self_key, server_key, bind_addr).await
 		}
-		Commands::Init => identity.generate(),
+		Commands::Init => {
+			ensure_cfg_path(&cfg_dir)?;
+			let identity = FileBasedIdentity::new(&cfg_dir)?;
+			identity.generate()
+		}
+		Commands::Identity => {
+			let identity = FileBasedIdentity::new(&cfg_dir)?;
+			match identity.load() {
+				Ok(self_key) => {
+					#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
+					{
+						println!("{}", self_key.public().to_z32());
+					}
+					Ok(())
+				}
+				Err(_) => {
+					bail!("No/Invalid identity found. Did you run `init`?")
+				}
+			}
+		}
 	}
 }

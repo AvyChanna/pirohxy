@@ -10,7 +10,7 @@ keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
 
 [dependencies]
-clap = { version = "4.5.42", features = ["derive"] }
+clap = { version = "4.5.43", features = ["derive"] }
 color-eyre = "0.6.5"
 directories = "6.0.0"
 ed25519-dalek = { version = "2.2.0", features = ["pem"] }
