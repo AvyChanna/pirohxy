@@ -87,6 +87,6 @@ async fn start_iroh_node(key: SecretKey) -> Result<Endpoint> {
 		.discovery_n0()
 		.bind()
 		.await?;
-	let _relay_url = endpoint.home_relay().initialized().await?;
+	let _relay_url = endpoint.home_relay().initialized().await;
 	Ok(endpoint)
 }
