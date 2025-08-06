@@ -1,5 +1,5 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::path::{Path, PathBuf};
+use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::{OptionExt, Result, bail, ensure};
@@ -30,6 +30,11 @@ struct Cli {
 	config: Option<PathBuf>,
 }
 
+#[derive(Debug, Subcommand)]
+enum ConfigGetter {
+	Path,
+	Identity,
+}
 #[derive(Subcommand, Debug)]
 enum Commands {
 	#[command(about = "Run egress")]
@@ -43,8 +48,11 @@ enum Commands {
 	},
 	#[command(about = "Initialize an identity")]
 	Init,
-	#[command(about = "Print current identity")]
-	Identity,
+	#[command(about = "Print current configuration")]
+	Get {
+		#[command(subcommand)]
+		getter: ConfigGetter,
+	},
 }
 
 impl Cli {
@@ -59,26 +67,17 @@ impl Cli {
 				.config_local_dir()
 				.to_path_buf(),
 		};
+		if !cfg_dir.exists() {
+			fs::create_dir_all(&cfg_dir)?;
+		}
+
+		ensure!(
+			cfg_dir.is_dir(),
+			"Config path is not a directory: {}",
+			cfg_dir.display()
+		);
 		Ok(cfg_dir.canonicalize()?)
 	}
-}
-
-/// Ensures that the configuration directory exists and is a directory.
-///
-/// # Errors
-/// The directory does not exist or is not a directory.
-fn ensure_cfg_path(cfg_dir: &Path) -> Result<()> {
-	ensure!(
-		cfg_dir.exists(),
-		"Config directory does not exist: {}",
-		cfg_dir.display()
-	);
-	ensure!(
-		cfg_dir.is_dir(),
-		"Config path is not a directory: {}",
-		cfg_dir.display()
-	);
-	Ok(())
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -98,12 +97,12 @@ async fn main() -> Result<()> {
 	debug!(args = ?cli, "Cli args");
 
 	let cfg_dir = cli.get_config_path()?;
+	let identity = FileBasedIdentity::new(&cfg_dir)?;
+	let auth = FileBasedAuth::new(&cfg_dir)?;
+	let resolver = FileBasedNameResolver::new(&cfg_dir)?;
 
 	match &cli.command {
 		Commands::Egress => {
-			ensure_cfg_path(&cfg_dir)?;
-			let identity = FileBasedIdentity::new(&cfg_dir)?;
-			let auth = FileBasedAuth::new(&cfg_dir)?;
 			let self_key = identity.load()?;
 			start_egress(self_key, auth).await
 		}
@@ -111,21 +110,20 @@ async fn main() -> Result<()> {
 			server: server_name,
 			bind_addr,
 		} => {
-			ensure_cfg_path(&cfg_dir)?;
-			let identity = FileBasedIdentity::new(&cfg_dir)?;
-			let resolver = FileBasedNameResolver::new(&cfg_dir)?;
 			let self_key = identity.load()?;
 			let server_key = resolver.resolve(server_name)?;
 			bind_and_connect(self_key, server_key, bind_addr).await
 		}
-		Commands::Init => {
-			ensure_cfg_path(&cfg_dir)?;
-			let identity = FileBasedIdentity::new(&cfg_dir)?;
-			identity.init()
-		}
-		Commands::Identity => {
-			let identity = FileBasedIdentity::new(&cfg_dir)?;
-			match identity.load() {
+		Commands::Init => identity.init(),
+		Commands::Get { getter } => match getter {
+			ConfigGetter::Path => {
+				#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
+				{
+					println!("{}", dunce::simplified(&cfg_dir).display());
+				}
+				Ok(())
+			}
+			ConfigGetter::Identity => match identity.load() {
 				Ok(self_key) => {
 					#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
 					{
@@ -136,7 +134,7 @@ async fn main() -> Result<()> {
 				Err(_) => {
 					bail!("No/Invalid identity found. Did you run `init`?")
 				}
-			}
-		}
+			},
+		},
 	}
 }
