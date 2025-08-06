@@ -18,7 +18,7 @@ use stream::copy_bidi_stream;
 const ALPN: &[u8] = b"/pirohxy/socks";
 
 /// Starts the egress proxy server with the given identity and configuration.
-/// 
+///
 /// # Errors
 /// The server fails to start, or if there is an error during the shutdown process.
 pub async fn start_egress<T>(self_key: SecretKey, cfg: T) -> Result<()>
@@ -39,7 +39,7 @@ where
 }
 
 /// Binds a TCP listener and connects to a server using the provided keys and address.
-/// 
+///
 /// # Errors
 /// The listener fails to bind, or there is an error during the connection process.
 pub async fn bind_and_connect(
@@ -91,7 +91,7 @@ pub async fn bind_and_connect(
 }
 
 /// Starts an iroh node with the given secret key and returns the endpoint.
-/// 
+///
 /// # Errors
 /// The node fails to start or there is an error during initialization.
 async fn start_iroh_node(key: SecretKey) -> Result<Endpoint> {
