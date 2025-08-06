@@ -7,7 +7,7 @@ use directories::ProjectDirs;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 
-use piroxy::{
+use pirohxy::{
 	bind_and_connect,
 	config::{
 		FileBasedAuth, FileBasedIdentity, FileBasedNameResolver, IdentityManager, NameResolver,
@@ -17,7 +17,7 @@ use piroxy::{
 
 const QUALIFIER_NAME: &str = "";
 const ORGANIZATION_NAME: &str = "avychanna";
-const APPLICATION_NAME: &str = "piroxy";
+const APPLICATION_NAME: &str = "pirohxy";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]

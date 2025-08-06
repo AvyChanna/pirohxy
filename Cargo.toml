@@ -1,14 +1,13 @@
 [package]
-name = "piroxy"
+name = "pirohxy"
 version = "0.1.0"
 edition = "2024"
 description = "SOCKS proxy with Iroh transport"
 license = "MIT"
-repository = "https://github.com/AvyChanna/piroxy"
+repository = "https://github.com/AvyChanna/pirohxy"
 readme = "README.md"
 keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
-publish = false
 
 [dependencies]
 clap = { version = "4.5.42", features = ["derive"] }

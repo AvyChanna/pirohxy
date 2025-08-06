@@ -13,7 +13,7 @@ use config::Auth;
 use protocol::Socks;
 use stream::copy_bidi_stream;
 
-const ALPN: &[u8] = b"/piroxy/socks";
+const ALPN: &[u8] = b"/pirohxy/socks";
 
 pub async fn start_egress<T>(self_key: SecretKey, cfg: T) -> Result<()>
 where
