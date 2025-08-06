@@ -8,6 +8,10 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
+/// Copies data between two streams in both directions until one of them is closed or an error occurs.
+///
+/// # Errors
+/// There is an error during the copy process, or user cancels the operation.
 pub(super) async fn copy_bidi_stream(
 	from1: impl AsyncRead + Send + Sync + Unpin + 'static,
 	to1: impl AsyncWrite + Send + Sync + Unpin + 'static,

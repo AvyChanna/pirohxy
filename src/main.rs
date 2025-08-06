@@ -48,6 +48,9 @@ enum Commands {
 }
 
 impl Cli {
+	/// Returns the path to the configuration directory.
+	/// If the `--config` argument is provided, it returns that path.
+	/// Otherwise, it uses the default project directories.
 	fn get_config_path(&self) -> Result<PathBuf> {
 		let cfg_dir = match &self.config {
 			Some(path) => path.clone(),
@@ -60,6 +63,10 @@ impl Cli {
 	}
 }
 
+/// Ensures that the configuration directory exists and is a directory.
+///
+/// # Errors
+/// The directory does not exist or is not a directory.
 fn ensure_cfg_path(cfg_dir: &Path) -> Result<()> {
 	ensure!(
 		cfg_dir.exists(),
@@ -114,7 +121,7 @@ async fn main() -> Result<()> {
 		Commands::Init => {
 			ensure_cfg_path(&cfg_dir)?;
 			let identity = FileBasedIdentity::new(&cfg_dir)?;
-			identity.generate()
+			identity.init()
 		}
 		Commands::Identity => {
 			let identity = FileBasedIdentity::new(&cfg_dir)?;

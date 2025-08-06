@@ -15,18 +15,34 @@ const PRIV_KEY_NAME: &str = "self.priv";
 const PUB_KEY_NAME: &str = "self.pub";
 
 pub trait Auth {
+	/// Checks if the client is allowed to connect.
 	fn is_allowed(&self, key: &NodeId) -> bool;
 }
 
 pub trait IdentityManager {
+	/// Attempts to load the identity secret key.
+	///
+	/// # Errors
+	/// The secret key cannot be loaded, which may happen if the file does not exist or is corrupted.
 	fn load(&self) -> Result<SecretKey>;
-	fn generate(&self) -> Result<()>;
+
+	/// Initializes the identity by generating a new secret key and saving it to disk.
+	///
+	/// # Errors
+	/// The identity already exists or if there is an error writing the key to disk.
+	fn init(&self) -> Result<()>;
+
+	/// Checks if the identity secret key exists on disk.
 	fn exists(&self) -> bool {
 		self.load().is_ok()
 	}
 }
 
 pub trait NameResolver {
+	/// Resolves a name to `NodeId`.
+	///
+	/// # Errors
+	/// The name cannot be resolved.
 	fn resolve<T>(&self, name: T) -> Result<NodeId>
 	where
 		T: AsRef<str>;
@@ -38,6 +54,10 @@ pub struct FileBasedAuth {
 }
 
 impl FileBasedAuth {
+	/// Creates a new `FileBasedAuth` instance with the specified base directory.
+	///
+	/// # Errors
+	/// The `auth` directory cannot be created or accessed.
 	pub fn new<T>(base_dir: T) -> Result<Self>
 	where
 		T: AsRef<Path>,
@@ -64,6 +84,10 @@ pub struct FileBasedIdentity {
 }
 
 impl FileBasedIdentity {
+	/// Creates a new `FileBasedIdentity` instance with the specified key directory.
+	///
+	/// # Errors
+	/// The key directory cannot be created or accessed.
 	pub fn new<T>(key_dir: T) -> Result<Self>
 	where
 		T: AsRef<Path>,
@@ -85,7 +109,7 @@ impl IdentityManager for FileBasedIdentity {
 		Ok(raw_key.into())
 	}
 
-	fn generate(&self) -> Result<()> {
+	fn init(&self) -> Result<()> {
 		ensure!(!self.exists(), "Identity already exists");
 		let key = SecretKey::generate(&mut OsRng);
 		key.secret()
@@ -103,6 +127,10 @@ pub struct FileBasedNameResolver {
 }
 
 impl FileBasedNameResolver {
+	/// Creates a new `FileBasedNameResolver` instance with the specified base directory.
+	///
+	/// # Errors
+	/// The `names` directory cannot be created or accessed.
 	pub fn new<T>(base_dir: T) -> Result<Self>
 	where
 		T: AsRef<Path>,

@@ -13,8 +13,12 @@ use tracing::warn;
 
 use crate::config::Auth;
 
+// Timeout for server TCP requests in seconds.
+/// This is used to limit the time a server will wait for a TCP request before timing out.
 const SERVER_TCP_REQ_TIMEOUT_SEC: u64 = 10;
 
+/// A Socks protocol handler for Iroh that implements the `ProtocolHandler` trait.
+/// It handles incoming connections and processes SOCKS5 commands.
 #[derive(Debug)]
 pub(crate) struct Socks<T>
 where
@@ -27,6 +31,7 @@ impl<T> Socks<T>
 where
 	T: Auth,
 {
+	/// Creates a new `Socks` instance with the provided authentication mechanism.
 	pub(crate) fn new(auth: T) -> Self {
 		Self { auth }
 	}
