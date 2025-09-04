@@ -16,12 +16,11 @@ use pirohxy::{
 	start_egress,
 };
 
-const QUALIFIER_NAME: &str = "";
 const ORGANIZATION_NAME: &str = "avychanna";
 const APPLICATION_NAME: &str = "pirohxy";
 
 #[derive(Parser, Debug)]
-#[command(author, version, about)]
+#[command(about, version, long_version=include_str!(concat!(env!("OUT_DIR"), "/long-help.txt")))]
 struct Cli {
 	#[command(subcommand)]
 	command: Commands,
@@ -49,7 +48,7 @@ enum Commands {
 	#[command(about = "Initialize an identity")]
 	Init,
 	#[command(about = "Print current configuration")]
-	Get {
+	Conf {
 		#[command(subcommand)]
 		getter: ConfigGetter,
 	},
@@ -62,7 +61,7 @@ impl Cli {
 	fn get_config_path(&self) -> Result<PathBuf> {
 		let cfg_dir = match &self.config {
 			Some(path) => path.clone(),
-			None => ProjectDirs::from(QUALIFIER_NAME, ORGANIZATION_NAME, APPLICATION_NAME)
+			None => ProjectDirs::from("", ORGANIZATION_NAME, APPLICATION_NAME)
 				.ok_or_eyre("Could not find project directories")?
 				.config_local_dir()
 				.to_path_buf(),
@@ -115,7 +114,7 @@ async fn main() -> Result<()> {
 			bind_and_connect(self_key, server_key, bind_addr).await
 		}
 		Commands::Init => identity.init(),
-		Commands::Get { getter } => match getter {
+		Commands::Conf { getter } => match getter {
 			ConfigGetter::Path => {
 				#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
 				{

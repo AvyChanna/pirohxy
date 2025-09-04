@@ -28,7 +28,7 @@ cargo install pirohxy
 
 ## Configuration
 
-Edit the configuration files in the `config/` directory to customize authentication, name alais, and identity.
+Configs can be modified by simple file ops. No need to restart the app itself. See examples below. 
 
 #### Server
 
@@ -37,10 +37,15 @@ Edit the configuration files in the `config/` directory to customize authenticat
 pirohxy init
 
 # Print server ID
-pirohxy info
+pirohxy conf identity
 
 # Whitelist a client to allow connections
-touch /path/to/config/auth/${client_id}
+CONF_DIR="$(pirohxy conf path)"
+CLIENT_ID="<Get identity from client>"
+
+touch "${CONF_DIR}/auth/${CLIENT_ID}"
+# OR Optionally, write some server metadata as well. This is ignored by the app
+echo "My dev server in XYZ VPS with IP 1.2.3.4" > "${CONF_DIR}/auth/${CLIENT_ID}"
 
 # Start the proxy
 pirohxy egress
@@ -53,15 +58,18 @@ pirohxy egress
 pirohxy init
 
 # Print client ID
-pirohxy info
+pirohxy conf identity
 
-# Register an alias for server
-echo ${server_id} > /path/to/config/${server_name}
+# (optional) Register an alias for server
+CONF_DIR="$(pirohxy conf path)"
+SERVER_ID="<Get identity from server>"
+SERVER_ALIAS="<alias name for server, so you won't have to remember IDs>"
+echo ${SERVER_ID} > ${CONF_DIR}/${SERVER_ALIAS}
 
 # Connect to the server
-pirohxy connect ${server_name}
-# OR directly use server ID without an alias
-pirohxy connect :${server_id}
+pirohxy connect ${SERVER_ALIAS}
+# OR directly use server ID without an alias (by adding a colon as prefix)
+pirohxy connect :${SERVER_ID}
 ```
 
 ## Contributing
