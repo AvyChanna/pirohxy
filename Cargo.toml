@@ -10,18 +10,18 @@ keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
 
 [dependencies]
-clap = { version = "4.5.43", features = ["derive"] }
+clap = { version = "4.5.47", features = ["derive"] }
 color-eyre = "0.6.5"
 directories = "6.0.0"
 dunce = "1.0.5"
 ed25519-dalek = { version = "2.2.0", features = ["pem"] }
 fast-socks5 = "1.0.0-rc.0"
-iroh = { version = "0.91.1", features = [] }
+iroh = { version = "0.91.2", features = [] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 tokio = { version = "1.47.1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal"] }
 tokio-util = "0.7.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "local-time"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "local-time"] }
 
 [profile.dev]
 split-debuginfo = "unpacked"
