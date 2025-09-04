@@ -1,6 +1,7 @@
 [package]
 name = "pirohxy"
-version = "0.2.0"
+build = "build.rs"
+version = "0.3.0"
 edition = "2024"
 description = "SOCKS proxy with Iroh transport"
 license = "MIT"
@@ -8,6 +9,7 @@ repository = "https://github.com/AvyChanna/pirohxy"
 readme = "README.md"
 keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
+rust-version = "1.85.0"
 
 [dependencies]
 clap = { version = "4.5.47", features = ["derive"] }
@@ -22,6 +24,10 @@ tokio = { version = "1.47.1", features = ["io-util", "macros", "net", "rt-multi-
 tokio-util = "0.7.16"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "local-time"] }
+
+[build-dependencies]
+anyhow = "1.0.71"
+git2 = "0.20.2"
 
 [profile.dev]
 split-debuginfo = "unpacked"
