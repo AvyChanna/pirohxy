@@ -25,3 +25,4 @@ pr-run-mode = "plan"
 [dist.github-custom-runners]
 x86_64-unknown-linux-musl = "ubuntu-latest"
 x86_64-pc-windows-msvc = "windows-latest"
+global = "ubuntu-latest"
