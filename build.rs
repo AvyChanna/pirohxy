@@ -22,7 +22,7 @@ fn rustc_version() -> String {
 
 fn pkg_version() -> String {
 	let v = env!("CARGO_PKG_VERSION");
-	if v.len() != 0 {
+	if !v.is_empty() {
 		v.to_string()
 	} else {
 		UNKNOWN_VAL.to_string()
