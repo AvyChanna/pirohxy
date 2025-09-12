@@ -3,6 +3,7 @@ name = "pirohxy"
 build = "build.rs"
 version = "0.3.0"
 edition = "2024"
+authors = ["AvyChanna"]
 description = "SOCKS proxy with Iroh transport"
 license = "MIT"
 repository = "https://github.com/AvyChanna/pirohxy"
@@ -20,13 +21,21 @@ ed25519-dalek = { version = "2.2.0", features = ["pem"] }
 fast-socks5 = "1.0.0-rc.0"
 iroh = { version = "0.91.2", features = [] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
-tokio = { version = "1.47.1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal"] }
+tokio = { version = "1.47.1", features = [
+    "io-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "signal",
+] }
 tokio-util = "0.7.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter", "local-time"] }
+tracing-subscriber = { version = "0.3.20", features = [
+    "env-filter",
+    "local-time",
+] }
 
 [build-dependencies]
-anyhow = "1.0.71"
 git2 = "0.20.2"
 
 [profile.dev]
@@ -38,6 +47,10 @@ codegen-units = 1
 opt-level = 3
 lto = true
 debug = "line-tables-only"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
 
 [lints.rust]
 rust_2018_idioms = { level = "warn", priority = -1 }
