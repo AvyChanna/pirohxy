@@ -16,7 +16,7 @@ unix-archive = ".tar.gz"
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
-install-updater = true
+install-updater = false
 # Publish jobs to run in CI
 publish-jobs = ["./publish-crate"]
 # Which actions to run on pull requests
