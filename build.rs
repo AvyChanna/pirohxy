@@ -14,18 +14,18 @@ fn rustc_version() -> String {
 		&& let Ok(output) = Command::new(rustc).arg("--version").output()
 		&& let Ok(version) = str::from_utf8(&output.stdout)
 	{
-		version.trim().to_string()
+		version.trim().to_owned()
 	} else {
-		UNKNOWN_VAL.to_string()
+		UNKNOWN_VAL.to_owned()
 	}
 }
 
 fn pkg_version() -> String {
 	let v = env!("CARGO_PKG_VERSION");
-	if !v.is_empty() {
-		v.to_string()
+	if v.is_empty() {
+		UNKNOWN_VAL.to_owned()
 	} else {
-		UNKNOWN_VAL.to_string()
+		v.to_owned()
 	}
 }
 
@@ -37,7 +37,7 @@ fn commit_info() -> String {
 	{
 		commit.id().to_string()
 	} else {
-		UNKNOWN_VAL.to_string()
+		UNKNOWN_VAL.to_owned()
 	}
 }
 
