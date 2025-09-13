@@ -6,7 +6,7 @@ use tokio::{
 	task::JoinSet,
 };
 use tokio_util::sync::CancellationToken;
-use tracing::warn;
+use tracing::debug;
 
 /// Copies data between two streams in both directions until one of them is closed or an error occurs.
 ///
@@ -40,8 +40,8 @@ pub(super) async fn copy_bidi_stream(
 	while let Some(res) = set.join_next().await {
 		match res {
 			Ok(Ok(_)) => (),
-			Ok(Err(err)) => warn!("Error in task: {err}"),
-			Err(err) => warn!("Error in task join: {err}"),
+			Ok(Err(err)) => debug!("Error in task: {err}"),
+			Err(err) => debug!("Error in task join: {err}"),
 		}
 	}
 	Ok(())
