@@ -1,8 +1,9 @@
+use core::str;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
-use std::{env, error, str};
+use std::{env, error};
 
 use git2::Repository;
 

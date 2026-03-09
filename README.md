@@ -28,7 +28,7 @@ cargo install pirohxy
 
 ## Configuration
 
-Configs can be modified by simple file ops. No need to restart the app itself. See examples below. 
+Configs can be modified by simple file ops. No need to restart the app itself. See examples below.
 
 #### Server
 

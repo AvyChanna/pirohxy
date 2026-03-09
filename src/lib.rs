@@ -1,17 +1,16 @@
-mod protocol;
+pub mod protocol;
 mod stream;
 
 use core::net::SocketAddr;
 
 use color_eyre::eyre::Result;
 use iroh::{
-	Endpoint, NodeId, SecretKey, Watcher,
+	Endpoint, EndpointId, SecretKey,
 	protocol::{AccessLimit, Router},
 };
 use tokio::{net::TcpListener, signal};
 use tracing::{debug, info, trace};
 
-pub use protocol::Socks;
 use stream::copy_bidi_stream;
 
 /// The ALPN (Application-Layer Protocol Negotiation) identifier for the iroh socks protocol.
@@ -24,13 +23,13 @@ const ALPN: &[u8] = b"/pirohxy/socks";
 /// The server fails to start, or if there is an error during the shutdown process.
 pub async fn start_egress<T>(self_key: SecretKey, auther: T) -> Result<()>
 where
-	T: Fn(NodeId) -> bool + Send + Sync + 'static,
+	T: Fn(EndpointId) -> bool + Send + Sync + 'static,
 {
 	debug!("Serving as node {}", self_key.public().fmt_short());
 	let endpoint = start_iroh_node(self_key).await?;
 
 	let router = Router::builder(endpoint.clone())
-		.accept(ALPN, AccessLimit::new(Socks::new(), auther))
+		.accept(ALPN, AccessLimit::new(protocol::Socks::new(), auther))
 		.spawn();
 
 	signal::ctrl_c().await?;
@@ -44,7 +43,7 @@ where
 /// The listener fails to bind, or there is an error during the connection process.
 pub async fn bind_and_connect(
 	self_key: SecretKey,
-	server_key: NodeId,
+	server_key: EndpointId,
 	bind_addr: &SocketAddr,
 ) -> Result<()> {
 	let client_listener = TcpListener::bind(bind_addr).await?;
@@ -96,11 +95,7 @@ pub async fn bind_and_connect(
 /// The node fails to start or there is an error during initialization.
 async fn start_iroh_node(key: SecretKey) -> Result<Endpoint> {
 	debug!("Starting iroh node as {}", key.public().fmt_short());
-	let endpoint = Endpoint::builder()
-		.secret_key(key)
-		.discovery_n0()
-		.bind()
-		.await?;
-	let _node_addr = endpoint.node_addr().initialized().await;
+	let endpoint = Endpoint::builder().secret_key(key).bind().await?;
+	endpoint.online().await;
 	Ok(endpoint)
 }

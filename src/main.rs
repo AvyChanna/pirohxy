@@ -1,11 +1,11 @@
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
-use iroh::node_info::NodeIdExt;
+use iroh::endpoint_info::EndpointIdExt;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 
-mod cli;
 mod cfg;
+mod cli;
 use cfg::FileConfig;
 use cli::Cli;
 use pirohxy::{bind_and_connect, start_egress};
