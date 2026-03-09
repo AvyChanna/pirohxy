@@ -67,10 +67,10 @@ async fn main() -> Result<()> {
 					}
 				},
 				Some(name) => {
-					let node_id = cfg.resolve_server_name(name)?;
+					let endpoint_id = cfg.resolve_server_name(name)?;
 					#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
 					{
-						println!("{}", node_id.to_z32());
+						println!("{}", endpoint_id.to_z32());
 					}
 					Ok(())
 				}
