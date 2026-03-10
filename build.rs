@@ -43,6 +43,7 @@ fn commit_info() -> String {
 }
 
 fn main() -> Result<(), Box<dyn error::Error>> {
+	// codeql[rust/path-injection]: OUT_DIR is provided by Cargo during build
 	let out_path = env::var("OUT_DIR")?;
 	let out = Path::new(out_path.as_str()).join(OUTFILE_NAME);
 
