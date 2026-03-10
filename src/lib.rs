@@ -1,21 +1,24 @@
+mod authenticated_router;
 pub mod protocol;
+mod shutdown;
 mod stream;
 
 use core::net::SocketAddr;
 
 use color_eyre::eyre::Result;
-use iroh::{
-	Endpoint, EndpointId, SecretKey,
-	protocol::{AccessLimit, Router},
-};
-use tokio::{net::TcpListener, signal};
+use iroh::{Endpoint, EndpointId, SecretKey};
+use tokio::net::TcpListener;
 use tracing::{debug, info, trace};
 
+use authenticated_router::AuthenticatedRouterBuilder;
+use protocol::socks::Socks;
+use shutdown::shutdown_signal;
 use stream::copy_bidi_stream;
 
 /// The ALPN (Application-Layer Protocol Negotiation) identifier for the iroh socks protocol.
 /// This is used to identify the protocol.
-const ALPN: &[u8] = b"/pirohxy/socks";
+/// Convention: namespace/app/proto/version
+const ALPN: &[u8] = b"/avychanna/pirohxy/socks/v1";
 
 /// Starts the egress proxy server with the given identity and configuration.
 ///
@@ -23,16 +26,16 @@ const ALPN: &[u8] = b"/pirohxy/socks";
 /// The server fails to start, or if there is an error during the shutdown process.
 pub async fn start_egress<T>(self_key: SecretKey, auther: T) -> Result<()>
 where
-	T: Fn(EndpointId) -> bool + Send + Sync + 'static,
+	T: Fn(EndpointId) -> bool + Send + Sync + 'static + Clone,
 {
 	debug!("Serving as node {}", self_key.public().fmt_short());
 	let endpoint = start_iroh_node(self_key).await?;
 
-	let router = Router::builder(endpoint.clone())
-		.accept(ALPN, AccessLimit::new(protocol::Socks::new(), auther))
+	let router = AuthenticatedRouterBuilder::new(endpoint.clone(), auther)
+		.accept(ALPN, Socks::new())
 		.spawn();
 
-	signal::ctrl_c().await?;
+	shutdown_signal().await?;
 
 	Ok(router.shutdown().await?)
 }
@@ -80,8 +83,8 @@ pub async fn bind_and_connect(
 					}
 				}
 			}
-			_ = signal::ctrl_c() => {
-				info!("Received Ctrl+C, exiting process loop.");
+			_ = shutdown_signal() => {
+				info!("Received exit signal, exiting process loop");
 				endpoint.close().await;
 				return Ok(());
 			}

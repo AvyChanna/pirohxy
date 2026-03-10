@@ -10,7 +10,7 @@ const PRIV_KEY_NAME: &str = "self.priv";
 const PUB_KEY_NAME: &str = "self.pub";
 const SECRET_KEY_LENGTH: usize = 32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct FileConfig {
 	auth_dir: PathBuf,
 

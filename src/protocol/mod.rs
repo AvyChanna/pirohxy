@@ -1,3 +1,1 @@
-mod socks;
-
-pub use socks::Socks;
+pub mod socks;
