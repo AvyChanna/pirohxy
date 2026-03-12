@@ -2,11 +2,12 @@ use color_eyre::eyre::{Result, eyre};
 use iroh::endpoint::{RecvStream, SendStream};
 use tokio::{
 	io::{AsyncRead, AsyncWrite},
-	signal,
 	task::JoinSet,
 };
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
+
+use crate::shutdown_signal;
 
 /// Copies data between two streams in both directions until one of them is closed or an error occurs.
 ///
@@ -32,8 +33,8 @@ pub(super) async fn copy_bidi_stream(
 			.await
 			.map_err(cancel_token(token2))
 	});
-	let _control_c = tokio::spawn(async move {
-		signal::ctrl_c().await?;
+	let control_c = tokio::spawn(async move {
+		shutdown_signal().await?;
 		token3.cancel();
 		Result::<()>::Ok(())
 	});
@@ -44,6 +45,11 @@ pub(super) async fn copy_bidi_stream(
 			Err(err) => debug!("Error in task join: {err}"),
 		}
 	}
+
+	// This task may still be running if the copy tasks finished first, so we abort it to ensure it doesn't keep running in the background.
+	// It is safe to abort this task even if it has already finished, as aborting a finished task has no effect.
+	control_c.abort();
+
 	Ok(())
 }
 

@@ -1,11 +1,11 @@
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
-use iroh::node_info::NodeIdExt;
+use iroh::endpoint_info::EndpointIdExt;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 
-mod cli;
 mod cfg;
+mod cli;
 use cfg::FileConfig;
 use cli::Cli;
 use pirohxy::{bind_and_connect, start_egress};
@@ -67,10 +67,10 @@ async fn main() -> Result<()> {
 					}
 				},
 				Some(name) => {
-					let node_id = cfg.resolve_server_name(name)?;
+					let endpoint_id = cfg.resolve_server_name(name)?;
 					#[expect(clippy::print_stdout, reason = "user requested data on stdout")]
 					{
-						println!("{}", node_id.to_z32());
+						println!("{}", endpoint_id.to_z32());
 					}
 					Ok(())
 				}

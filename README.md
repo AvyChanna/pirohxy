@@ -28,7 +28,7 @@ cargo install pirohxy
 
 ## Configuration
 
-Configs can be modified by simple file ops. No need to restart the app itself. See examples below. 
+Configs can be modified by simple file ops. No need to restart the app itself. See examples below.
 
 #### Server
 
@@ -64,7 +64,7 @@ pirohxy conf identity
 CONF_DIR="$(pirohxy conf path)"
 SERVER_ID="<Get identity from server>"
 SERVER_ALIAS="<alias name for server, so you won't have to remember IDs>"
-echo ${SERVER_ID} > ${CONF_DIR}/${SERVER_ALIAS}
+echo ${SERVER_ID} > ${CONF_DIR}/names/${SERVER_ALIAS}
 
 # Connect to the server
 pirohxy connect ${SERVER_ALIAS}
