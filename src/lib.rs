@@ -6,7 +6,7 @@ mod stream;
 use core::net::SocketAddr;
 
 use color_eyre::eyre::Result;
-use iroh::{Endpoint, EndpointId, SecretKey};
+use iroh::{Endpoint, EndpointId, SecretKey, endpoint::presets};
 use tokio::net::TcpListener;
 use tracing::{debug, info, trace};
 
@@ -98,7 +98,10 @@ pub async fn bind_and_connect(
 /// The node fails to start or there is an error during initialization.
 async fn start_iroh_node(key: SecretKey) -> Result<Endpoint> {
 	debug!("Starting iroh node as {}", key.public().fmt_short());
-	let endpoint = Endpoint::builder().secret_key(key).bind().await?;
+	let endpoint = Endpoint::builder(presets::N0)
+		.secret_key(key)
+		.bind()
+		.await?;
 	endpoint.online().await;
 	Ok(endpoint)
 }
