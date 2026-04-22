@@ -10,7 +10,7 @@ repository = "https://github.com/AvyChanna/pirohxy"
 readme = "README.md"
 keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
-rust-version = "1.85.0"
+rust-version = "1.89.0"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
