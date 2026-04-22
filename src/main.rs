@@ -1,6 +1,5 @@
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
-use iroh::endpoint_info::EndpointIdExt;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 

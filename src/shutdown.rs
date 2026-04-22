@@ -8,7 +8,7 @@ pub(crate) async fn shutdown_signal() -> Result<(), io::Error> {
 	let ctrl_c = async { signal::ctrl_c().await };
 
 	let terminate = async {
-		signal::unix::signal(signal::unix::SignalKind::terminate())?
+		let _ = signal::unix::signal(signal::unix::SignalKind::terminate())?
 			.recv()
 			.await;
 		Ok::<(), io::Error>(())
