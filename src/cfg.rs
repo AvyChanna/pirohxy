@@ -4,7 +4,7 @@ use std::{
 };
 
 use color_eyre::eyre::{Result, ensure, eyre};
-use iroh::{EndpointId, SecretKey, endpoint_info::EndpointIdExt};
+use iroh::{EndpointId, SecretKey};
 
 const PRIV_KEY_NAME: &str = "self.priv";
 const PUB_KEY_NAME: &str = "self.pub";
@@ -64,7 +64,7 @@ impl FileConfig {
 
 	pub(super) fn init_identity(&self) -> Result<()> {
 		ensure!(!self.does_identity_exist(), "Identity already exists");
-		let key = SecretKey::generate(&mut rand::rng());
+		let key = SecretKey::generate();
 		let encoded = z32::encode(&key.to_bytes());
 		fs::write(&self.priv_key_file, encoded)?;
 		Ok(fs::write(&self.pub_key_file, key.public().to_z32())?)
