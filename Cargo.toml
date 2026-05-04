@@ -18,7 +18,7 @@ color-eyre = "0.6.5"
 directories = "6.0.0"
 dunce = "1.0.5"
 fast-socks5 = "1.0.0"
-iroh = { version = "0.98.1", features = [] }
+iroh = { version = "0.98.2", features = [] }
 tokio = { version = "1.52.1", features = [
     "io-util",
     "macros",
