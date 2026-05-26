@@ -10,7 +10,8 @@ repository = "https://github.com/AvyChanna/pirohxy"
 readme = "README.md"
 keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
-rust-version = "1.89.0"
+rust-version = "1.91.0"
+default-run = "pirohxy"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
@@ -18,24 +19,22 @@ color-eyre = "0.6.5"
 directories = "6.0.0"
 dunce = "1.0.5"
 fast-socks5 = "1.0.0"
-iroh = { version = "0.98.1", features = [] }
-tokio = { version = "1.52.1", features = [
-    "io-util",
-    "macros",
-    "net",
-    "rt-multi-thread",
-    "signal",
-] }
+iroh = { version = "1.0.0-rc.0", features = [
+    "fast-apple-datapath",
+    "tls-ring",
+], default-features = false }
+tokio = { version = "1.52.3", features = ["signal"] }
 tokio-util = "0.7.18"
-tracing = "0.1.44"
+tracing = { version = "0.1.44", default-features = false }
 tracing-subscriber = { version = "0.3.23", features = [
     "env-filter",
     "local-time",
 ] }
 z32 = "1.3.0"
+rand = "0.10.1"
 
 [build-dependencies]
-git2 = "0.20.4"
+git2 = { version = "0.21.0", default-features = false }
 
 [profile.dev]
 split-debuginfo = "unpacked"

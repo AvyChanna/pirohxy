@@ -40,6 +40,11 @@ impl FileConfig {
 			fs::create_dir_all(&name_dir)?;
 		}
 
+		let gitignore_file = base_dir.join(".gitignore");
+		if !gitignore_file.exists() {
+			fs::write(&gitignore_file, "*\n")?;
+		}
+
 		Ok(Self {
 			auth_dir,
 			priv_key_file: base_dir.join(PRIV_KEY_NAME),

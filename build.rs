@@ -51,9 +51,12 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 	.canonicalize()
 	.expect("failed to canonicalize target dir");
 
-	if !out_dir.starts_with(&target_dir) {
-		panic!("OUT_DIR is outside target dir: {out_dir:?} not under {target_dir:?}");
-	}
+	assert!(
+		out_dir.starts_with(&target_dir),
+		"OUT_DIR is outside target dir: {} not under {}",
+		out_dir.display(),
+		target_dir.display()
+	);
 
 	// Now use out_dir for generated outputs.
 	let out_file_name = out_dir.join(OUTFILE_NAME);

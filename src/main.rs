@@ -1,17 +1,18 @@
+mod cfg;
+mod cli;
+
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt::time::LocalTime};
 
-mod cfg;
-mod cli;
 use cfg::FileConfig;
 use cli::Cli;
 use pirohxy::{bind_and_connect, start_egress};
 
 use crate::cli::{Commands, ConfigGetter};
 
-#[tokio::main(flavor = "multi_thread")]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
 	color_eyre::install()?;
 
@@ -31,17 +32,23 @@ async fn main() -> Result<()> {
 	let cfg = FileConfig::new(&cfg_dir)?;
 
 	match &cli.command {
-		Commands::Egress => {
+		Commands::Egress { server_req_timeout } => {
 			let self_key = cfg.load_identity()?;
-			start_egress(self_key, move |x| cfg.is_access_allowed(&x)).await
+			start_egress(
+				self_key,
+				move |x| cfg.is_access_allowed(&x),
+				*server_req_timeout,
+			)
+			.await
 		}
 		Commands::Connect {
 			server: server_name,
 			bind_addr,
+			conn_timeout,
 		} => {
 			let self_key = cfg.load_identity()?;
 			let server_key = cfg.resolve_server_name(server_name)?;
-			bind_and_connect(self_key, server_key, bind_addr).await
+			bind_and_connect(self_key, server_key, bind_addr, *conn_timeout).await
 		}
 		Commands::Init => cfg.init_identity(),
 		Commands::Conf { getter } => match getter {
