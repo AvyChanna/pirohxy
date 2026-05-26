@@ -1,7 +1,7 @@
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::Result;
 use iroh::endpoint::{RecvStream, SendStream};
 use tokio::{
-	io::{AsyncRead, AsyncWrite},
+	io::{AsyncRead, AsyncWrite, AsyncWriteExt},
 	task::JoinSet,
 };
 use tokio_util::sync::CancellationToken;
@@ -9,54 +9,52 @@ use tracing::debug;
 
 use crate::shutdown_signal;
 
+enum CopyResult {
+	Completed,
+	Cancelled,
+}
+
 /// Copies data between two streams in both directions until one of them is closed or an error occurs.
-///
-/// # Errors
-/// There is an error during the copy process, or user cancels the operation.
 pub(super) async fn copy_bidi_stream(
 	from1: impl AsyncRead + Send + Sync + Unpin + 'static,
 	to1: impl AsyncWrite + Send + Sync + Unpin + 'static,
 	from2: RecvStream,
 	to2: SendStream,
-) -> Result<()> {
-	let token1 = CancellationToken::new();
-	let token2 = token1.clone();
-	let token3 = token1.clone();
+) {
+	let token = CancellationToken::new();
+	let token1 = token.clone();
+	let token2 = token.clone();
 	let mut set = JoinSet::new();
-	let _forward_from_stdin = set.spawn(async move {
-		copy_forward(from1, to2, token1.clone())
-			.await
-			.map_err(cancel_token(token1))
-	});
-	let _forward_to_stdout = set.spawn(async move {
-		copy_backward(from2, to1, token2.clone())
-			.await
-			.map_err(cancel_token(token2))
-	});
-	let control_c = tokio::spawn(async move {
-		shutdown_signal().await?;
-		token3.cancel();
-		Result::<()>::Ok(())
-	});
-	while let Some(res) = set.join_next().await {
-		match res {
-			Ok(Ok(_)) => (),
-			Ok(Err(err)) => debug!("Error in task: {err}"),
-			Err(err) => debug!("Error in task join: {err}"),
+	let _forward_from_stdin = set.spawn(async move { copy_forward(from1, to2, token1).await });
+	let _forward_to_stdout = set.spawn(async move { copy_backward(from2, to1, token2).await });
+
+	let shutdown = shutdown_signal();
+	tokio::pin!(shutdown);
+	let mut shutdown_observed = false;
+
+	while !set.is_empty() {
+		tokio::select! {
+			res = set.join_next(), if !set.is_empty() => {
+				if let Some(res) = res {
+					match res {
+						Ok(Ok(CopyResult::Completed)) => debug!("Copy task completed"),
+						Ok(Ok(CopyResult::Cancelled)) => debug!("Copy task cancelled"),
+						Ok(Err(err)) => debug!("Error in task: {err}"),
+						Err(err) => debug!("Error in task join: {err}"),
+					}
+
+					// Stop the opposite copy direction as soon as one finishes or fails.
+					token.cancel();
+				}
+			}
+			res = &mut shutdown, if !shutdown_observed => {
+				shutdown_observed = true;
+				if let Err(err) = res {
+					debug!("Failed while waiting for shutdown signal: {err}");
+				}
+				token.cancel();
+			}
 		}
-	}
-
-	// This task may still be running if the copy tasks finished first, so we abort it to ensure it doesn't keep running in the background.
-	// It is safe to abort this task even if it has already finished, as aborting a finished task has no effect.
-	control_c.abort();
-
-	Ok(())
-}
-
-fn cancel_token<T>(token: CancellationToken) -> impl Fn(T) -> T {
-	move |x| {
-		token.cancel();
-		x
 	}
 }
 
@@ -64,16 +62,16 @@ async fn copy_forward(
 	mut from1: impl AsyncRead + Unpin,
 	mut to2: SendStream,
 	token: CancellationToken,
-) -> Result<u64> {
+) -> Result<CopyResult> {
 	tokio::select! {
 		res = tokio::io::copy(&mut from1, &mut to2) => {
-			let size = res?;
+			let _ = res?;
 			to2.finish()?;
-			Ok(size)
+			Ok(CopyResult::Completed)
 		}
 		() = token.cancelled() => {
 			let _ = to2.reset(0u8.into()).ok();
-			Err(eyre!("Operation cancelled"))
+			Ok(CopyResult::Cancelled)
 		}
 	}
 }
@@ -82,14 +80,16 @@ async fn copy_backward(
 	mut from2: RecvStream,
 	mut to1: impl AsyncWrite + Unpin,
 	token: CancellationToken,
-) -> Result<u64> {
+) -> Result<CopyResult> {
 	tokio::select! {
 		res = tokio::io::copy(&mut from2, &mut to1) => {
-			Ok(res?)
+			let _ = res?;
+			to1.shutdown().await?;
+			Ok(CopyResult::Completed)
 		}
 		() = token.cancelled() => {
 			let _ = from2.stop(0u8.into()).ok();
-			Err(eyre!("Operation cancelled"))
+			Ok(CopyResult::Cancelled)
 		}
 	}
 }
