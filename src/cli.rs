@@ -82,32 +82,17 @@ impl Cli {
 }
 
 mod parser {
-	use core::{fmt, num::ParseIntError, time::Duration};
+	use core::{num::ParseIntError, time::Duration};
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, thiserror::Error)]
 	pub(crate) enum Error {
+		#[error("invalid number format: {error}")]
 		ParseErr { error: ParseIntError },
+		#[error("minute to second conversion overflowed")]
 		Overflow,
+		#[error("duration string is empty")]
 		Empty,
 	}
-
-	impl fmt::Display for Error {
-		fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-			match self {
-				Self::ParseErr { error: e } => {
-					write!(formatter, "invalid number format: {e}")
-				}
-				Self::Overflow => {
-					write!(formatter, "minute to second conversion overflowed")
-				}
-				Self::Empty => {
-					write!(formatter, "duration string is empty")
-				}
-			}
-		}
-	}
-
-	impl core::error::Error for Error {}
 
 	pub(crate) fn parse_duration(string: &str) -> Result<Duration, Error> {
 		if string == "0" {
@@ -130,5 +115,122 @@ mod parser {
 
 		let dur_num: u64 = string.parse().map_err(|e| Error::ParseErr { error: e })?;
 		Ok(Duration::from_secs(dur_num))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use core::{
+		net::{IpAddr, Ipv4Addr, SocketAddr},
+		time::Duration,
+	};
+	use std::{fs, path::PathBuf};
+
+	use clap::Parser;
+	use color_eyre::eyre::Result;
+
+	use super::{
+		Cli, Commands, ConfigGetter,
+		parser::{Error, parse_duration},
+	};
+
+	fn test_config_path(name: &str) -> PathBuf {
+		let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+		path.push("target");
+		path.push("test-data");
+		path.push(format!("cli-{name}-{}", std::process::id()));
+		path
+	}
+
+	#[test]
+	fn parses_duration_seconds_minutes_and_plain_seconds() {
+		assert_eq!(parse_duration("0"), Ok(Duration::from_secs(0)));
+		assert_eq!(parse_duration("15"), Ok(Duration::from_secs(15)));
+		assert_eq!(parse_duration("15s"), Ok(Duration::from_secs(15)));
+		assert_eq!(parse_duration("2m"), Ok(Duration::from_mins(2)));
+	}
+
+	#[test]
+	fn rejects_empty_invalid_and_overflowing_durations() {
+		assert_eq!(parse_duration(""), Err(Error::Empty));
+		assert!(matches!(
+			parse_duration("not-a-duration"),
+			Err(Error::ParseErr { .. })
+		));
+		assert!(matches!(
+			parse_duration("18446744073709551615000"),
+			Err(Error::ParseErr { .. })
+		));
+		assert_eq!(
+			parse_duration("18446744073709551615m"),
+			Err(Error::Overflow)
+		);
+	}
+
+	#[test]
+	fn parses_connect_defaults() -> Result<()> {
+		let cli = Cli::try_parse_from(["pirohxy", "connect", "server-a"])?;
+
+		let Commands::Connect {
+			server,
+			bind_addr,
+			conn_timeout,
+		} = cli.command
+		else {
+			panic!("expected connect command");
+		};
+
+		assert_eq!(server, "server-a");
+		assert_eq!(
+			bind_addr,
+			SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8080)
+		);
+		assert_eq!(conn_timeout, Duration::from_secs(10));
+		Ok(())
+	}
+
+	#[test]
+	fn parses_config_getters() -> Result<()> {
+		let path_cli = Cli::try_parse_from(["pirohxy", "conf", "path"])?;
+		assert!(matches!(
+			path_cli.command,
+			Commands::Conf {
+				getter: ConfigGetter::Path
+			}
+		));
+
+		let identity_cli = Cli::try_parse_from(["pirohxy", "conf", "identity", "main"])?;
+		assert!(matches!(
+			identity_cli.command,
+			Commands::Conf {
+				getter: ConfigGetter::Identity {
+					identity_name: Some(ref name)
+				}
+			} if name == "main"
+		));
+		Ok(())
+	}
+
+	#[test]
+	fn get_config_path_creates_and_canonicalizes_explicit_directory() -> Result<()> {
+		let path = test_config_path("explicit");
+		if path.exists() {
+			fs::remove_dir_all(&path)?;
+		}
+
+		let cli = Cli::try_parse_from([
+			"pirohxy",
+			"--config",
+			path.to_str().expect("test path should be utf-8"),
+			"init",
+		])?;
+		let actual = cli.get_config_path()?;
+
+		assert!(actual.is_absolute());
+		assert!(actual.is_dir());
+		assert_eq!(actual, path.canonicalize()?);
+
+		fs::remove_dir_all(path)?;
+		Ok(())
 	}
 }

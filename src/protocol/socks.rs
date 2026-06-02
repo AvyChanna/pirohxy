@@ -35,7 +35,7 @@ impl ProtocolHandler for Socks {
 			let (s, r) = conn.accept_bi().await?;
 			let request_timeout = self.request_timeout;
 			let _task = tokio::spawn(async move {
-				if let Err(err) = handle_stream(r, s, request_timeout).await {
+				if let Err(err) = handle_socks(r, s, request_timeout).await {
 					debug!("Failed to process SOCKS stream: {}", err);
 				}
 			});
@@ -43,7 +43,7 @@ impl ProtocolHandler for Socks {
 	}
 }
 
-async fn handle_stream(
+async fn handle_socks(
 	mut r: RecvStream,
 	mut s: SendStream,
 	server_timeout: Duration,
