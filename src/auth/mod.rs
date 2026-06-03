@@ -1,7 +1,7 @@
 mod client;
 mod server;
 
-use core::fmt::{Debug, Display};
+use core::fmt::Debug;
 
 use iroh::{
 	Endpoint, EndpointId, SecretKey, Signature,
@@ -15,42 +15,42 @@ use server::server_authenticate;
 const NONCE_LEN: usize = 32;
 const SIG_LEN: usize = Signature::LENGTH;
 const KEY_LEN: usize = EndpointId::LENGTH;
-const MSG_LEN: usize = KEY_LEN + KEY_LEN + NONCE_LEN; // server_id + clinet_id + nonce
+const MSG_PREFIX: &str = "pirohxy-auth-challenge";
+const SUFFIX: [u8; 10] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff];
+const MSG_LEN: usize = MSG_PREFIX.len() + KEY_LEN + KEY_LEN + NONCE_LEN + SUFFIX.len(); // prefix + server_id + clinet_id + nonce + suffix
 const AUTH_OK: u8 = 1;
 const AUTH_DENY: u8 = 0;
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub(super) enum VerifyError {
+	#[error("stream error during authentication")]
 	StreamError,
+	#[error("invalid identity token")]
 	InvalidToken,
+	#[error("invalid identity signature")]
 	InvalidSignature,
+	#[error("identity not allowed")]
 	NotAllowed,
+	#[error("random number generation error")]
 	RngError,
 }
-
-impl Display for VerifyError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		match self {
-			Self::StreamError => write!(f, "stream error during authentication"),
-			Self::InvalidToken => write!(f, "invalid identity token"),
-			Self::InvalidSignature => write!(f, "invalid identity signature"),
-			Self::NotAllowed => write!(f, "identity not allowed"),
-			Self::RngError => write!(f, "random number generation error"),
-		}
-	}
-}
-
-impl core::error::Error for VerifyError {}
 
 fn make_message(
 	server_id: &[u8; KEY_LEN],
 	client_id: &[u8; KEY_LEN],
 	nonce: &[u8; NONCE_LEN],
 ) -> [u8; MSG_LEN] {
+	const SERVER_ID_START: usize = MSG_PREFIX.len();
+	const CLIENT_ID_START: usize = SERVER_ID_START + KEY_LEN;
+	const NONCE_START: usize = CLIENT_ID_START + KEY_LEN;
+	const SUFFIX_START: usize = NONCE_START + NONCE_LEN;
+
 	let mut msg = [0; MSG_LEN];
-	msg[..KEY_LEN].copy_from_slice(server_id);
-	msg[KEY_LEN..KEY_LEN * 2].copy_from_slice(client_id);
-	msg[KEY_LEN * 2..].copy_from_slice(nonce);
+	msg[..SERVER_ID_START].copy_from_slice(MSG_PREFIX.as_bytes());
+	msg[SERVER_ID_START..CLIENT_ID_START].copy_from_slice(server_id);
+	msg[CLIENT_ID_START..NONCE_START].copy_from_slice(client_id);
+	msg[NONCE_START..SUFFIX_START].copy_from_slice(nonce);
+	msg[SUFFIX_START..].copy_from_slice(&SUFFIX);
 	msg
 }
 
@@ -165,5 +165,42 @@ impl AuthenticatedRouterBuilder for RouterBuilder {
 	{
 		let endpoint = self.endpoint().clone();
 		self.accept(alpn, AccessLimiter::new(endpoint, proto, auther))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use iroh::SecretKey;
+
+	use crate::auth::{MSG_PREFIX, SUFFIX};
+
+	use super::{AUTH_DENY, AUTH_OK, MSG_LEN, NONCE_LEN, make_message};
+
+	#[test]
+	fn auth_status_bytes_are_stable() {
+		assert_eq!(AUTH_OK, 1);
+		assert_eq!(AUTH_DENY, 0);
+		assert_ne!(AUTH_OK, AUTH_DENY);
+	}
+
+	#[test]
+	fn make_message_concatenates_server_client_and_nonce_correctly() {
+		let server = SecretKey::generate().public();
+		let client = SecretKey::generate().public();
+		let nonce = [7u8; NONCE_LEN];
+
+		let message = make_message(server.as_bytes(), client.as_bytes(), &nonce);
+
+		let expected = {
+			let mut m = Vec::new();
+			m.extend_from_slice(MSG_PREFIX.as_bytes());
+			m.extend_from_slice(server.as_bytes());
+			m.extend_from_slice(client.as_bytes());
+			m.extend_from_slice(&nonce);
+			m.extend_from_slice(&SUFFIX);
+			m
+		};
+		assert_eq!(message.len(), MSG_LEN);
+		assert_eq!(message.to_vec(), expected);
 	}
 }

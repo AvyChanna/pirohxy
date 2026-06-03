@@ -1,7 +1,7 @@
 mod auth;
 pub mod protocol;
+pub mod protoutils;
 mod shutdown;
-mod stream;
 use core::net::SocketAddr;
 
 use color_eyre::eyre::Result;
@@ -12,8 +12,8 @@ use tracing::{debug, info, trace};
 
 use auth::{AuthenticatedConnection, AuthenticatedRouterBuilder};
 use protocol::socks::Socks;
+use protoutils::stream::copy_bidi_stream;
 use shutdown::shutdown_signal;
-use stream::copy_bidi_stream;
 
 /// The ALPN (Application-Layer Protocol Negotiation) identifier for the iroh socks protocol.
 /// This is used to identify the protocol.

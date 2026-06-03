@@ -107,3 +107,124 @@ impl FileConfig {
 		Ok(EndpointId::from_z32(data.trim())?)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use std::{
+		fs,
+		path::{Path, PathBuf},
+	};
+
+	use color_eyre::eyre::Result;
+	use iroh::SecretKey;
+
+	use super::FileConfig;
+
+	fn fresh_base(name: &str) -> Result<PathBuf> {
+		let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+		path.push("target");
+		path.push("test-data");
+		path.push(format!("cfg-{name}-{}", std::process::id()));
+		cleanup(&path)?;
+		Ok(path)
+	}
+
+	fn cleanup(path: &Path) -> Result<()> {
+		if path.exists() {
+			fs::remove_dir_all(path)?;
+		}
+		Ok(())
+	}
+
+	#[test]
+	fn new_creates_expected_directory_layout() -> Result<()> {
+		let base = fresh_base("layout")?;
+		let cfg = FileConfig::new(&base)?;
+
+		assert!(cfg.auth_dir.is_dir());
+		assert!(cfg.name_dir.is_dir());
+		assert_eq!(fs::read_to_string(base.join(".gitignore"))?, "*\n");
+		assert_eq!(cfg.priv_key_file, base.join("self.priv"));
+		assert_eq!(cfg.pub_key_file, base.join("self.pub"));
+
+		cleanup(&base)
+	}
+
+	#[test]
+	fn identity_round_trips_and_cannot_be_reinitialized() -> Result<()> {
+		let base = fresh_base("identity")?;
+		let cfg = FileConfig::new(&base)?;
+
+		cfg.init_identity()?;
+		let loaded = cfg.load_identity()?;
+		let public_from_file = fs::read_to_string(base.join("self.pub"))?;
+
+		assert_eq!(loaded.public().to_z32(), public_from_file);
+		assert!(cfg.init_identity().is_err());
+
+		let loaded2 = cfg.load_identity()?;
+		assert_eq!(loaded2.public().to_z32(), public_from_file);
+
+		cleanup(&base)
+	}
+
+	#[test]
+	fn load_identity_rejects_wrong_length_key_data() -> Result<()> {
+		let base = fresh_base("bad-identity")?;
+		let cfg = FileConfig::new(&base)?;
+		fs::write(base.join("self.priv"), z32::encode(&[1, 2, 3]))?;
+
+		let err = cfg.load_identity().expect_err("short key should fail");
+		assert!(err.to_string().contains("invalid privkey size"));
+
+		cleanup(&base)
+	}
+
+	#[test]
+	fn access_is_allowed_only_for_files_named_after_endpoint_ids() -> Result<()> {
+		let base = fresh_base("access")?;
+		let cfg = FileConfig::new(&base)?;
+		let key = SecretKey::generate().public();
+
+		assert!(!cfg.is_access_allowed(&key));
+		fs::write(cfg.auth_dir.join(key.to_z32()), "")?;
+		assert!(cfg.is_access_allowed(&key));
+
+		let other = SecretKey::generate().public();
+		fs::create_dir_all(cfg.auth_dir.join(other.to_z32()))?;
+		assert!(!cfg.is_access_allowed(&other));
+
+		cleanup(&base)
+	}
+
+	#[test]
+	fn resolves_direct_endpoint_ids_and_named_entries() -> Result<()> {
+		let base = fresh_base("names")?;
+		let cfg = FileConfig::new(&base)?;
+		let endpoint = SecretKey::generate().public();
+
+		assert_eq!(
+			cfg.resolve_server_name(format!(":{}", endpoint.to_z32()))?,
+			endpoint
+		);
+
+		fs::write(cfg.name_dir.join("prod_1"), format!("{}\n", endpoint.to_z32()))?;
+		assert_eq!(cfg.resolve_server_name("prod_1")?, endpoint);
+
+		cleanup(&base)
+	}
+
+	#[test]
+	fn rejects_invalid_server_names_before_reading_files() -> Result<()> {
+		let base = fresh_base("invalid-names")?;
+		let cfg = FileConfig::new(&base)?;
+
+		assert!(cfg.resolve_server_name("").is_err());
+		assert!(cfg.resolve_server_name(":").is_err());
+		assert!(cfg.resolve_server_name(":hello").is_err());
+		assert!(cfg.resolve_server_name("has/slash").is_err());
+		assert!(cfg.resolve_server_name("a".repeat(64)).is_err());
+
+		cleanup(&base)
+	}
+}
