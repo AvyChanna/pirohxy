@@ -104,7 +104,7 @@ async fn handle_exec(mut r: RecvStream, s: SendStream) -> Result<()> {
 		let mut buffer = [0u8; 8192];
 		loop {
 			match reader.read(&mut buffer).await {
-				Ok(0) => break,
+				Ok(0) | Err(_) => break,
 				Ok(n) => {
 					let chunk = buffer[..n].to_vec();
 					#[expect(
@@ -113,7 +113,6 @@ async fn handle_exec(mut r: RecvStream, s: SendStream) -> Result<()> {
 					)]
 					let _ = tx_output_stdout.send(ExecOutput::Stdout(chunk)).await;
 				}
-				Err(_) => todo!("handle errors in task not spawning"),
 			}
 		}
 	});

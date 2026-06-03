@@ -6,6 +6,9 @@ use super::stream::{ReadStructExt, WriteStructExt};
 
 /// Spawns an interactive message handler with bidi message passing.
 /// This creates a pair of tokio channels for bidi communication
+///
+/// # Errors
+/// Returns an error if the channels cannot be created.
 pub async fn spawn_interactive<F, T>(
 	mut recv_stream: RecvStream,
 	mut send_stream: SendStream,
