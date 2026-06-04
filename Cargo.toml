@@ -19,7 +19,7 @@ color-eyre = "0.6.5"
 directories = "6.0.0"
 dunce = "1.0.5"
 fast-socks5 = "1.0.0"
-iroh = { version = "1.0.0-rc.0", features = [
+iroh = { version = "1.0.0-rc.1", features = [
     "fast-apple-datapath",
     "tls-ring",
 ], default-features = false }
