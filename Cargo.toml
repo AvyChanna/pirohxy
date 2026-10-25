@@ -14,21 +14,35 @@ rust-version = "1.91.0"
 default-run = "pirohxy"
 
 [dependencies]
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive"] }
+clap-markdown = "0.1.5"
 color-eyre = "0.6.5"
+crossterm = "0.29.0"
 directories = "6.0.0"
 dunce = "1.0.5"
 fast-socks5 = "1.0.0"
-iroh = { version = "1.0.0-rc.1", features = [ # FIXME: Use stable version
+iroh = { version = "1.4.1", features = [
     "fast-apple-datapath",
     "tls-ring",
 ], default-features = false }
+portable-pty = "0.9.0"
 postcard = { version = "1.1.3", default-features = false, features = ["alloc"] }
-rand = "0.10.1"
-serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.18"
-tokio = { version = "1.52.3", features = ["process", "signal"] }
-tokio-util = "0.7.18"
+rand = "0.10.3"
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = [
+    "fs",
+    "io-util",
+    "macros",
+    "net",
+    "process",
+    "rt",
+    "rt-multi-thread",
+    "signal",
+    "sync",
+    "time",
+] }
+tokio-util = "0.7.20"
 tracing = { version = "0.1.44", default-features = false }
 tracing-subscriber = { version = "0.3.23", features = [
     "env-filter",
@@ -36,8 +50,13 @@ tracing-subscriber = { version = "0.3.23", features = [
 ] }
 z32 = "1.3.0"
 
-[build-dependencies]
-git2 = { version = "0.21.0", default-features = false }
+[[test]]
+name = "mux"
+path = "integration-tests/mux.rs"
+
+[[test]]
+name = "cli_smoke"
+path = "integration-tests/cli_smoke.rs"
 
 [profile.dev]
 split-debuginfo = "unpacked"
@@ -55,83 +74,75 @@ inherits = "release"
 
 [lints.rust]
 rust_2018_idioms = { level = "warn", priority = -1 }
-rust-2018-compatibility = { level = "warn", priority = -1 }
-rust-2021-compatibility = { level = "warn", priority = -1 }
-rust-2024-compatibility = { level = "warn", priority = -1 }
-deprecated-safe = { level = "warn", priority = -1 }
-future-incompatible = { level = "warn", priority = -1 }
-keyword-idents = { level = "warn", priority = -1 }
-let-underscore = { level = "warn", priority = -1 }
-nonstandard-style = { level = "warn", priority = -1 }
-# refining-impl-trait = { level = "warn", priority = -1 }
+rust_2018_compatibility = { level = "warn", priority = -1 }
+rust_2021_compatibility = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
+deprecated_safe = { level = "warn", priority = -1 }
+future_incompatible = { level = "warn", priority = -1 }
+keyword_idents = { level = "warn", priority = -1 }
+let_underscore = { level = "warn", priority = -1 }
+nonstandard_style = { level = "warn", priority = -1 }
 refining_impl_trait_reachable = "allow"
-absolute-paths-not-starting-with-crate = "warn"
-ambiguous-negative-literals = "warn"
-closure-returning-async-block = "warn"
-deprecated-in-future = "warn"
-deprecated-safe-2024 = "warn"
-deref-into-dyn-supertrait = "warn"
-edition-2024-expr-fragment-specifier = "warn"
-elided-lifetimes-in-paths = "warn"
-explicit-outlives-requirements = "warn"
-ffi-unwind-calls = "warn"
-if-let-rescope = "warn"
-impl-trait-overcaptures = "warn"
-impl-trait-redundant-captures = "warn"
-keyword-idents-2018 = "warn"
-keyword-idents-2024 = "warn"
-let-underscore-drop = "warn"
-linker-messages = "warn"
-macro-use-extern-crate = "warn"
-meta-variable-misuse = "warn"
-missing-unsafe-on-extern = "warn"
-non-ascii-idents = "warn"
-redundant-imports = "warn"
-redundant-lifetimes = "warn"
-rust-2021-incompatible-closure-captures = "warn"
-rust-2021-incompatible-or-patterns = "warn"
-rust-2021-prefixes-incompatible-syntax = "warn"
-rust-2021-prelude-collisions = "warn"
-rust-2024-guarded-string-incompatible-syntax = "warn"
-rust-2024-incompatible-pat = "warn"
-rust-2024-prelude-collisions = "warn"
-single-use-lifetimes = "warn"
-tail-expr-drop-order = "warn"
-trivial-casts = "warn"
-trivial-numeric-casts = "warn"
-unit-bindings = "warn"
-unnameable-types = "warn"
-unreachable-pub = "warn"
-unsafe-attr-outside-unsafe = "warn"
-unsafe-code = "forbid"
-unsafe-op-in-unsafe-fn = "warn"
-unstable-features = "warn"
-unused-extern-crates = "warn"
-unused-import-braces = "warn"
-unused-lifetimes = "warn"
-unused-macro-rules = "warn"
-unused-qualifications = "warn"
-unused-results = "warn"
-variant-size-differences = "warn"
-
-# unnameable_types = "allow"
-# unreachable_pub = "warn"
-# unsafe_op_in_unsafe_fn = "warn"
-# unused_lifetimes = "warn"
-# unused_macro_rules = "warn"
-# unused_qualifications = "warn"
-# unsafe_code = "deny"
+absolute_paths_not_starting_with_crate = "warn"
+ambiguous_negative_literals = "warn"
+closure_returning_async_block = "warn"
+deprecated_in_future = "warn"
+deprecated_safe_2024 = "warn"
+deref_into_dyn_supertrait = "warn"
+edition_2024_expr_fragment_specifier = "warn"
+elided_lifetimes_in_paths = "warn"
+explicit_outlives_requirements = "warn"
+ffi_unwind_calls = "warn"
+if_let_rescope = "warn"
+impl_trait_overcaptures = "warn"
+impl_trait_redundant_captures = "warn"
+keyword_idents_2018 = "warn"
+keyword_idents_2024 = "warn"
+let_underscore_drop = "warn"
+linker_messages = "warn"
+macro_use_extern_crate = "warn"
+meta_variable_misuse = "warn"
+missing_unsafe_on_extern = "warn"
+non_ascii_idents = "warn"
+redundant_imports = "warn"
+redundant_lifetimes = "warn"
+rust_2021_incompatible_closure_captures = "warn"
+rust_2021_incompatible_or_patterns = "warn"
+rust_2021_prefixes_incompatible_syntax = "warn"
+rust_2021_prelude_collisions = "warn"
+rust_2024_guarded_string_incompatible_syntax = "warn"
+rust_2024_incompatible_pat = "warn"
+rust_2024_prelude_collisions = "warn"
+single_use_lifetimes = "warn"
+tail_expr_drop_order = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+unnameable_types = "warn"
+unreachable_pub = "warn"
+unsafe_attr_outside_unsafe = "warn"
+unsafe_code = "forbid"
+unsafe_op_in_unsafe_fn = "warn"
+unstable_features = "warn"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+unused_results = "warn"
+variant_size_differences = "warn"
 
 [lints.clippy]
 multiple_crate_versions = "allow"
-pedantic = { level = "warn", priority = -1 }
 cargo = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 complexity = { level = "warn", priority = -1 }
 correctness = { level = "deny", priority = -1 }
 perf = { level = "warn", priority = -1 }
 style = { level = "warn", priority = -1 }
 suspicious = { level = "warn", priority = -1 }
-# restriction = { level = "warn", priority = -1 }
+# The `restriction` group stays off: it bans things this crate needs on purpose, such as
+# `unwrap` in tests and arithmetic that cannot overflow.
 alloc_instead_of_core = "warn"
 allow_attributes = "warn"
 allow_attributes_without_reason = "warn"

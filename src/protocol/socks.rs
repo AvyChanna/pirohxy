@@ -12,6 +12,8 @@ use iroh::{
 };
 use tracing::{debug, trace};
 
+use crate::protoutils::accept::serve_bi_streams;
+
 /// A Socks protocol handler for Iroh that implements the `ProtocolHandler` trait.
 /// It handles incoming connections and processes SOCKS5 commands.
 #[derive(Debug, Copy, Clone, Default)]
@@ -29,24 +31,18 @@ impl Socks {
 
 impl ProtocolHandler for Socks {
 	async fn accept(&self, conn: Connection) -> Result<(), AcceptError> {
-		let endpoint_id = conn.remote_id();
-		trace!("Accepted connection from {}", endpoint_id.fmt_short());
-		loop {
-			let (s, r) = conn.accept_bi().await?;
-			let request_timeout = self.request_timeout;
-			let _task = tokio::spawn(async move {
-				if let Err(err) = handle_socks(r, s, request_timeout).await {
-					debug!("Failed to process SOCKS stream: {}", err);
-				}
-			});
-		}
+		let request_timeout = self.request_timeout;
+		serve_bi_streams(&conn, "SOCKS", move |r, s| {
+			handle_socks(r, s, request_timeout)
+		})
+		.await
 	}
 }
 
 async fn handle_socks(
 	mut r: RecvStream,
 	mut s: SendStream,
-	server_timeout: Duration,
+	request_timeout: Duration,
 ) -> Result<(), AcceptError> {
 	let socket = tokio::io::join(&mut r, &mut s);
 	let (proto, cmd, mut target_addr) = Socks5ServerProtocol::accept_no_auth(socket)
@@ -62,7 +58,10 @@ async fn handle_socks(
 
 	let result = match cmd {
 		Socks5Command::TCPConnect => {
-			let _tcp_proxy = run_tcp_proxy(proto, &target_addr, server_timeout, true)
+			// `run_tcp_proxy` copies both directions and returns the session handle
+			// once they are done; the handle carries nothing left to use, so it is
+			// bound only to say so and dropped here.
+			let _session = run_tcp_proxy(proto, &target_addr, request_timeout, true)
 				.await
 				.map_err(AcceptError::from_err)?;
 			Ok(())

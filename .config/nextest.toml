@@ -1,0 +1,30 @@
+# nextest configuration - https://nexte.st/docs/configuration/
+#
+# `cargo nextest` is the test runner for this repo. It runs one process per test, so a hung
+# test is killed on its own instead of stalling the other test binaries, and the four binaries
+# (lib, bin, `cli_smoke`, `mux`) run concurrently.
+
+[profile.default]
+# Every `cli_smoke` test boots two real iroh nodes, so the slowest of them takes tens of
+# seconds on a dev machine and longer on a loaded CI runner. Warn about a slow test only after
+# 120 s, and only terminate it after 3 periods (6 min), so a stuck test still ends instead of
+# hanging the run forever.
+slow-timeout = { period = "120s", terminate-after = 3 }
+
+# Each `cli_smoke` test boots two iroh nodes and binds loopback ports. Run them four at a
+# time rather than ten at a time, so they cannot race each other for a port or for CPU, while
+# the unit tests keep running at full parallelism.
+[test-groups]
+cli = { max-threads = 4 }
+
+[[profile.default.overrides]]
+filter = 'binary(cli_smoke)'
+test-group = 'cli'
+
+[profile.ci]
+inherits = "default"
+# Keep going after the first failure: one broken channel must not hide the state of the rest
+# of the matrix.
+fail-fast = false
+# Retries are deliberately left off. The CLI suite is network- and PTY-dependent, and a test
+# that passes on the second attempt is still a test worth fixing.
