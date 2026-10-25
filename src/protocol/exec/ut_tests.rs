@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use color_eyre::eyre::Result;
 
-use super::{ExecCommand, ExecInput, ExecOutput, SIGKILL};
+use super::{ExecCommand, ExecInput, ExecOutput, SIGKILL, exit_code_for};
 
 #[test]
 fn exec_command_round_trips_through_wire_format() -> Result<()> {

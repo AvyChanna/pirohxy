@@ -83,7 +83,7 @@ async fn exit_signal() -> Result<(), io::Error> {
 		let mut terminate = signal::unix::signal(signal::unix::SignalKind::terminate())?;
 		tokio::select! {
 			res = signal::ctrl_c() => res?,
-			() = terminate.recv() => {}
+			_ = terminate.recv() => {}
 		}
 	}
 

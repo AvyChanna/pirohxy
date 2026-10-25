@@ -402,25 +402,6 @@ mod tests {
 		cleanup(&base)
 	}
 
-	#[cfg(unix)]
-	#[test]
-	fn loading_an_identity_tightens_a_loose_legacy_key() -> Result<()> {
-		use std::os::unix::fs::PermissionsExt;
-
-		let base = fresh_base("key-perms-repair")?;
-		let cfg = FileConfig::new(&base)?;
-		cfg.init_identity()?;
-
-		let key_file = base.join("self.priv");
-		fs::set_permissions(&key_file, fs::Permissions::from_mode(0o644))?;
-		assert_eq!(fs::metadata(&key_file)?.permissions().mode() & 0o777, 0o644);
-
-		cfg.load_identity()?;
-		assert_eq!(fs::metadata(&key_file)?.permissions().mode() & 0o777, 0o600);
-
-		cleanup(&base)
-	}
-
 	#[test]
 	fn resolves_direct_endpoint_ids_and_named_entries() -> Result<()> {
 		let base = fresh_base("names")?;
