@@ -297,7 +297,7 @@ fn exit_code_for(status: ExitStatus) -> i32 {
 
 	#[cfg(unix)]
 	{
-		use std::os::unix::process::ExitStatusExt as _;
+		use std::os::unix::process::ExitStatusExt;
 		if let Some(signal) = status.signal() {
 			return SIGNAL_EXIT_BASE + signal;
 		}

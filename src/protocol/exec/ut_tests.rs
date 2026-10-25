@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use color_eyre::eyre::Result;
 
-use super::{ExecCommand, ExecInput, ExecOutput, SIGKILL, exit_code_for};
+use super::{ExecCommand, ExecInput, ExecOutput, SIGKILL};
 
 #[test]
 fn exec_command_round_trips_through_wire_format() -> Result<()> {
@@ -54,14 +54,14 @@ fn exec_interactive_messages_round_trip_through_wire_format() -> Result<()> {
 #[cfg(unix)]
 #[test]
 fn a_command_ended_by_a_signal_reports_that_signal() {
-	use std::os::unix::process::ExitStatusExt as _;
+	use std::os::unix::process::ExitStatusExt;
 
 	use super::SIGNAL_EXIT_BASE;
 
 	// The raw status a process that `SIGKILL` ended leaves behind.
 	let killed = std::process::ExitStatus::from_raw(i32::from(SIGKILL));
 	assert_eq!(
-		exit_code_for(killed),
+		super::exit_code_for(killed),
 		SIGNAL_EXIT_BASE + i32::from(SIGKILL),
 		"an interrupted command has to report the signal that ended it"
 	);
@@ -70,8 +70,8 @@ fn a_command_ended_by_a_signal_reports_that_signal() {
 #[cfg(unix)]
 #[test]
 fn an_exit_code_is_reported_as_it_is() {
-	use std::os::unix::process::ExitStatusExt as _;
+	use std::os::unix::process::ExitStatusExt;
 
 	let exited = std::process::ExitStatus::from_raw(7 << 8);
-	assert_eq!(exit_code_for(exited), 7);
+	assert_eq!(super::exit_code_for(exited), 7);
 }
