@@ -1,4 +1,5 @@
 use iroh::SecretKey;
+use rand::Rng;
 
 use crate::auth::{MSG_PREFIX, SUFFIX};
 
@@ -15,7 +16,8 @@ fn auth_status_bytes_are_stable() {
 fn make_message_concatenates_server_client_and_nonce_correctly() {
 	let server = SecretKey::generate().public();
 	let client = SecretKey::generate().public();
-	let nonce = [7u8; NONCE_LEN];
+	let mut nonce = [0u8; NONCE_LEN];
+	rand::rng().fill_bytes(&mut nonce);
 
 	let message = make_message(server.as_bytes(), client.as_bytes(), &nonce);
 

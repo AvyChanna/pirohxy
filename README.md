@@ -1,6 +1,6 @@
-# Piroxy
+# Pirohxy
 
-Piroxy is a SSH replacement that uses iroh as its transport layer. This means that you can connect to remote machines without exposing any ports, or adding special firewall rules.
+Pirohxy is a SSH replacement that uses iroh as its transport layer. This means that you can connect to remote machines without exposing any ports, or adding special firewall rules.
 
 It carries the SSH-style channels you would reach for `ssh -L`, `ssh -R`, `ssh host cmd`, `ssh -t`, `ssh -N` and `sftp` for, all over the same iroh connection.
 
@@ -163,7 +163,7 @@ program directly without a shell, so builtins, pipelines and redirection need `s
 
 ### Terminal multiplexing
 
-Piroxy carries the pseudo terminal; [Zellij](https://zellij.dev) can own everything above it - panes,
+Pirohxy carries the pseudo terminal; [Zellij](https://zellij.dev) can own everything above it - panes,
 tabs, scrollback, sessions that keep running after you disconnect. Nothing in this repository knows
 Zellij exists; it is reached through the commands above. The shell client runs the local terminal in raw
 mode, reports the real window size and forwards resize, so a full-screen program like Zellij lays out

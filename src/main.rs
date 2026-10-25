@@ -451,7 +451,7 @@ fn terminal_size() -> (u16, u16) {
 /// Encodes one key event as the bytes a terminal would put on the wire for it.
 ///
 /// This mirrors Zellij's own crossterm key encoder (`cast_crossterm_key` in
-/// `zellij-utils/src/input/mod.rs`), so a keystroke that reaches a piroxy shell session
+/// `zellij-utils/src/input/mod.rs`), so a keystroke that reaches a pirohxy shell session
 /// produces the same bytes it would in a Zellij session: plain characters, control bytes
 /// (Ctrl-C is `0x03`), function keys F1-F12, Shift+Tab (`ESC [ Z`), Alt/Meta (`ESC` + the
 /// character), Ctrl+Alt and `AltGr`, and modifier-aware CSI sequences for navigation keys
