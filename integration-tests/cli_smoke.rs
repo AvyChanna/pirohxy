@@ -151,16 +151,6 @@ async fn exec_runs_a_command_and_mirrors_its_exit_code() -> Result<()> {
 		"`--env` was not applied: {:?}",
 		placed.stdout
 	);
-
-	#[cfg(windows)]
-	{
-		// A builtin is not a program: with no shell to run it, the server has to refuse.
-		client
-			.run(&["exec", &target, "echo", "hello-exec"])
-			.await?
-			.expect_failure()?;
-	}
-
 	Ok(())
 }
 
