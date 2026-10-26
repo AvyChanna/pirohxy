@@ -1,111 +1,124 @@
+extern crate alloc;
+
 mod auth;
 pub mod protocol;
+pub mod protoutils;
 mod shutdown;
-mod stream;
-use core::net::SocketAddr;
+
+use alloc::sync::Arc;
+use std::path::Path;
 
 use color_eyre::eyre::Result;
 use iroh::{Endpoint, EndpointId, SecretKey, endpoint::presets, protocol::RouterBuilder};
-use tokio::net::TcpListener;
-use tokio::time::{Duration, timeout};
-use tracing::{debug, info, trace};
+use tokio::time::Duration;
+use tracing::{debug, info};
 
-use auth::{AuthenticatedConnection, AuthenticatedRouterBuilder};
-use protocol::socks::Socks;
-use shutdown::shutdown_signal;
-use stream::copy_bidi_stream;
-
-/// The ALPN (Application-Layer Protocol Negotiation) identifier for the iroh socks protocol.
-/// This is used to identify the protocol.
-/// Convention: namespace/app/proto/version
-const ALPN: &[u8] = b"/avychanna/pirohxy/socks/v1";
+use auth::AuthenticatedRouterBuilder;
+use protocol::{
+	exec::Exec, file::File, reverse_tunnel::ReverseTunnel, shell::Shell, socks::Socks,
+	tunnel::Tunnel,
+};
+use protoutils::alpn::Protocol;
+use shutdown::shutdown_handle;
 
 /// Starts the egress proxy server with the given identity and configuration.
+///
+/// Every protocol in [`Protocol::ALL`] is registered. Which of them a peer may actually
+/// use is decided per connection by `auther`, so an identity can be limited to SOCKS
+/// while still being allowed to run commands, or the other way around.
+///
+/// `file_root` is the directory the `file` protocol is confined to. It must exist; the
+/// CLI creates it when it is missing. `default_shell` is the program the `shell`
+/// protocol runs when a client does not ask for a specific command.
 ///
 /// # Errors
 /// The server fails to start, or if there is an error during the shutdown process.
 pub async fn start_egress<T>(
 	self_key: SecretKey,
-	auther: T,
+	file_root: &Path,
+	default_shell: Option<&str>,
 	server_req_timeout: Duration,
+	auther: T,
 ) -> Result<()>
 where
-	T: Fn(EndpointId) -> bool + Send + Sync + 'static,
+	T: Fn(EndpointId, Protocol) -> bool + Send + Sync + 'static,
 {
 	debug!("Serving as node {}", self_key.public().fmt_short());
 	let endpoint = start_iroh_node(self_key).await?;
+	let router = egress_router(
+		endpoint,
+		file_root,
+		default_shell,
+		server_req_timeout,
+		auther,
+	)
+	.spawn();
 
-	let router = RouterBuilder::new(endpoint.clone())
-		.accept_with_auth(ALPN, Socks::new(server_req_timeout), auther)
-		.spawn();
-
-	shutdown_signal().await?;
+	// One listener for the whole process, the same one every accept loop the router runs
+	// selects on.
+	shutdown_handle().cancelled().await;
+	info!("exit signal received, shutting the router down");
 
 	Ok(router.shutdown().await?)
 }
 
-/// Binds a TCP listener and connects to a server using the provided keys and address.
+/// Builds the router that registers every protocol in [`Protocol::ALL`] on `endpoint`.
 ///
-/// # Errors
-/// The listener fails to bind, or there is an error during the connection process.
-pub async fn bind_and_connect(
-	master_key: SecretKey,
-	server_id: EndpointId,
-	bind_addr: &SocketAddr,
-	conn_timeout: Duration,
-) -> Result<()> {
-	let client_listener = TcpListener::bind(bind_addr).await?;
-	let client_key = SecretKey::generate();
-	debug!(
-		"Dialing server {} as client {}",
-		server_id.fmt_short(),
-		client_key.public().fmt_short()
-	);
-	let endpoint = start_iroh_node(client_key).await?;
-	let conn = endpoint
-		.connect_with_auth(server_id, ALPN, master_key)
-		.await?;
+/// Each protocol is gated by `auther`, which decides per connection whether `id` may use
+/// that protocol, so an identity can be limited to SOCKS while still being allowed to run
+/// commands, or the other way around. The router is returned unspawned so a caller can
+/// bind extra handlers or shut it down on its own schedule; [`start_egress`] is the
+/// long-running form.
+///
+/// `file_root` is the directory the `file` protocol is confined to. It must exist.
+/// `default_shell` is the program the `shell` protocol runs when a client does not ask for
+/// a specific command.
+#[must_use]
+pub fn egress_router<T>(
+	endpoint: Endpoint,
+	file_root: &Path,
+	default_shell: Option<&str>,
+	server_req_timeout: Duration,
+	auther: T,
+) -> RouterBuilder
+where
+	T: Fn(EndpointId, Protocol) -> bool + Send + Sync + 'static,
+{
+	// The router needs one authorizer per protocol, so the caller's closure is shared
+	// rather than moved into the first registration.
+	let auther = Arc::new(auther);
+	let mut router = RouterBuilder::new(endpoint);
 
-	loop {
-		trace!("Waiting for client connection on {}", bind_addr);
-
-		tokio::select! {
-			client_socket_res = client_listener.accept() => {
-				match client_socket_res {
-					Ok((client_socket, _)) => {
-						debug!("Accepted client connection at {}", client_socket.peer_addr()?);
-						let conn_clone = conn.clone();
-						let _task = tokio::spawn(async move {
-							trace!("Opening bi-directional stream to server {}", server_id.fmt_short());
-							let (to1, from1) = match timeout(conn_timeout, conn_clone.open_bi()).await {
-								Ok(Ok(streams)) => streams,
-								Ok(Err(err)) => {
-									debug!("Failed to open bi-directional stream to server {}: {}", server_id.fmt_short(), err);
-									return;
-								}
-								Err(_) => {
-									debug!("Timed out opening bi-directional stream to server {}", server_id.fmt_short());
-									return;
-								}
-							};
-							trace!("Bi-directional stream to server {} opened", server_id.fmt_short());
-							let (from2, to2) = client_socket.into_split();
-
-							copy_bidi_stream(from2, to2, from1, to1).await;
-						});
-					}
-					Err(e) => {
-						info!("Failed to accept client connection: {}", e);
-					}
-				}
+	for protocol in Protocol::ALL {
+		let allowed = {
+			let auther = Arc::clone(&auther);
+			move |id: EndpointId, protocol: Protocol| (*auther)(id, protocol)
+		};
+		let next = match protocol {
+			Protocol::Socks => {
+				router.accept_with_auth(protocol, Socks::new(server_req_timeout), allowed)
 			}
-			_ = shutdown_signal() => {
-				info!("Received exit signal, exiting process loop");
-				endpoint.close().await;
-				return Ok(());
+			Protocol::Tunnel => router.accept_with_auth(protocol, Tunnel::new(), allowed),
+			Protocol::ReverseTunnel => {
+				router.accept_with_auth(protocol, ReverseTunnel::new(), allowed)
 			}
-		}
+			Protocol::Exec => router.accept_with_auth(protocol, Exec::new(), allowed),
+			Protocol::Shell => router.accept_with_auth(
+				protocol,
+				Shell::new().with_shell(default_shell.map(str::to_owned)),
+				allowed,
+			),
+			Protocol::File => {
+				router.accept_with_auth(protocol, File::new(file_root.to_path_buf()), allowed)
+			}
+		};
+		router = next;
+		info!("registered the {protocol} protocol");
 	}
+
+	// The builder keeps its own handle on the endpoint, so the router it spawns holds the
+	// node open for as long as it lives.
+	router
 }
 
 /// Starts an iroh node with the given secret key and returns the endpoint.
