@@ -10,7 +10,7 @@ repository = "https://github.com/AvyChanna/pirohxy"
 readme = "README.md"
 keywords = ["iroh", "socks", "proxy"]
 categories = ["network-programming", "command-line-utilities"]
-rust-version = "1.91.0"
+rust-version = "1.95.0"
 default-run = "pirohxy"
 
 [dependencies]
